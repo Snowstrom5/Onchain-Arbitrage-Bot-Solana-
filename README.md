@@ -27,7 +27,7 @@ https://solscan.io/tx/2JtgbXAgwPib9L5Ruc5vLhQ5qeX5EMhVDQbcCaAYVJKpEFn22ArEqXhipu
 1. Clone the repository
 
    ```
-   git clone https://github.com/cetipo/solana-onchain-arbitrage-bot.git
+   git clone https://github.com/cetipoo/solana-onchain-arbitrage-bot.git
    cd solana-onchain-arbitrage-bot
    ```
 
