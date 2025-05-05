@@ -4,13 +4,19 @@ A simple Solana onchain arbitrage bot for arbitrage opportunities. This bot calc
 
 This is a demo bot to show how to parse each pool and call the onchain program.
 
-Example transaction:
+Full documentation on the onchain program:
+https://docs.solanamevbot.com/home/onchain-bot/onchain-program
 
+Full functional bot:
+https://docs.solanamevbot.com/home/onchain-bot/getting-started
+
+Example transaction:
 https://solscan.io/tx/2JtgbXAgwPib9L5Ruc5vLhQ5qeX5EMhVDQbcCaAYVJKpEFn22ArEqXhipu5fFyhrEwosiHWzRUhWispJUCYyAnKT
 
 ## Features
 
 - Load configuration from a config file
+- Create ATA if not exist
 - Send transactions through multiple RPC endpoints (spam)
 - Kamino flashloan integration
 - Parse all available pool types (Raydium, DLMM, Whirlpool, etc.)
