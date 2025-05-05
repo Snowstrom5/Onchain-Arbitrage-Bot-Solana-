@@ -7,8 +7,10 @@ compute_unit_limit = 600000
 [routing]
 # Configuration for each mint to process
 [[routing.mint_config_list]]
-mint = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"                     # USDC
+mint = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"                # USDC
+pump_pool_list = ["Gf7sXMoP8iRw4iiXmJ1nq4vxcRycbGXy5RL8a8LnTd3v"]
 raydium_pool_list = ["58oQChx4yWmvKdwLLZzBi4ChoCc2fqCUWBkwMihLYQo2"]
+# meteora_damm_pool_list = ["5yuefgbJJpmFNK2iiYbLSpv1aZXq7F9AUKkZKErTYCvs"]
 meteora_dlmm_pool_list = ["5rCf1DM8LjKTw4YqhnoLcngyZYeNnQqztScTogYHAS6"]
 whirlpool_pool_list = ["Czfq3xZZDmsdGdUyrNLtRhGc47cXcZtLG4crryfu44zE"]
 raydium_clmm_pool_list = ["3ucNos4NbumPLZNWztqGHNFFgkHeRMBQAVemeeomsUxv"]
