@@ -1,4 +1,7 @@
-use crate::constants::SOL_MINT;
+use crate::{
+    constants::SOL_MINT,
+    dex::raydium::{clmm_info::POOL_TICK_ARRAY_BITMAP_SEED, raydium_clmm_program_id},
+};
 use solana_program::pubkey::Pubkey;
 use std::str::FromStr;
 
@@ -49,9 +52,25 @@ pub struct RaydiumClmmPool {
     pub pool: Pubkey,
     pub amm_config: Pubkey,
     pub observation_state: Pubkey,
+    pub bitmap_extension: Pubkey,
     pub x_vault: Pubkey,
     pub y_vault: Pubkey,
     pub tick_arrays: Vec<Pubkey>,
+}
+
+#[derive(Debug, Clone)]
+pub struct MeteoraDAmmPool {
+    pub pool: Pubkey,
+    pub token_x_vault: Pubkey,
+    pub token_sol_vault: Pubkey,
+    pub token_x_token_vault: Pubkey,
+    pub token_sol_token_vault: Pubkey,
+    pub token_x_lp_mint: Pubkey,
+    pub token_sol_lp_mint: Pubkey,
+    pub token_x_pool_lp: Pubkey,
+    pub token_sol_pool_lp: Pubkey,
+    pub admin_token_fee_x: Pubkey,
+    pub admin_token_fee_sol: Pubkey,
 }
 
 #[derive(Debug, Clone)]
@@ -65,6 +84,7 @@ pub struct MintPoolData {
     pub dlmm_pairs: Vec<DlmmPool>,
     pub whirlpool_pools: Vec<WhirlpoolPool>,
     pub raydium_clmm_pools: Vec<RaydiumClmmPool>,
+    pub meteora_damm_pools: Vec<MeteoraDAmmPool>,
 }
 
 impl MintPoolData {
@@ -83,6 +103,7 @@ impl MintPoolData {
             dlmm_pairs: Vec::new(),
             whirlpool_pools: Vec::new(),
             raydium_clmm_pools: Vec::new(),
+            meteora_damm_pools: Vec::new(),
         })
     }
 
@@ -189,18 +210,58 @@ impl MintPoolData {
         y_vault: &str,
         tick_arrays: Vec<&str>,
     ) -> anyhow::Result<()> {
+        let pool_pubkey = Pubkey::from_str(pool)?;
+        let bitmap_extension = Pubkey::find_program_address(
+            &[
+                POOL_TICK_ARRAY_BITMAP_SEED.as_bytes(),
+                &pool_pubkey.as_ref(),
+            ],
+            &raydium_clmm_program_id(),
+        )
+        .0;
         let tick_array_pubkeys = tick_arrays
             .iter()
             .map(|&s| Pubkey::from_str(s))
             .collect::<Result<Vec<_>, _>>()?;
 
         self.raydium_clmm_pools.push(RaydiumClmmPool {
-            pool: Pubkey::from_str(pool)?,
+            pool: pool_pubkey,
             amm_config: Pubkey::from_str(amm_config)?,
             observation_state: Pubkey::from_str(observation_state)?,
             x_vault: Pubkey::from_str(x_vault)?,
             y_vault: Pubkey::from_str(y_vault)?,
+            bitmap_extension,
             tick_arrays: tick_array_pubkeys,
+        });
+        Ok(())
+    }
+
+    pub fn add_meteora_damm_pool(
+        &mut self,
+        pool: &str,
+        token_x_vault: &str,
+        token_sol_vault: &str,
+        token_x_token_vault: &str,
+        token_sol_token_vault: &str,
+        token_x_lp_mint: &str,
+        token_sol_lp_mint: &str,
+        token_x_pool_lp: &str,
+        token_sol_pool_lp: &str,
+        admin_token_fee_x: &str,
+        admin_token_fee_sol: &str,
+    ) -> anyhow::Result<()> {
+        self.meteora_damm_pools.push(MeteoraDAmmPool {
+            pool: Pubkey::from_str(pool)?,
+            token_x_vault: Pubkey::from_str(token_x_vault)?,
+            token_sol_vault: Pubkey::from_str(token_sol_vault)?,
+            token_x_token_vault: Pubkey::from_str(token_x_token_vault)?,
+            token_sol_token_vault: Pubkey::from_str(token_sol_token_vault)?,
+            token_x_lp_mint: Pubkey::from_str(token_x_lp_mint)?,
+            token_sol_lp_mint: Pubkey::from_str(token_sol_lp_mint)?,
+            token_x_pool_lp: Pubkey::from_str(token_x_pool_lp)?,
+            token_sol_pool_lp: Pubkey::from_str(token_sol_pool_lp)?,
+            admin_token_fee_x: Pubkey::from_str(admin_token_fee_x)?,
+            admin_token_fee_sol: Pubkey::from_str(admin_token_fee_sol)?,
         });
         Ok(())
     }

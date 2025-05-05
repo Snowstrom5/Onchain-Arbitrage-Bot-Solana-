@@ -18,7 +18,9 @@ use std::sync::Arc;
 use tracing::{debug, error, info};
 
 use crate::constants::sol_mint;
-use crate::dex::meteora::constants::{dlmm_event_authority, dlmm_program_id};
+use crate::dex::meteora::constants::{
+    damm_program_id, dlmm_event_authority, dlmm_program_id, vault_program_id,
+};
 use crate::dex::pump::constants::{pump_fee_wallet, pump_program_id};
 use crate::dex::raydium::constants::{
     raydium_clmm_program_id, raydium_cp_program_id, raydium_program_id,
@@ -235,6 +237,7 @@ fn create_swap_instruction(
         accounts.push(AccountMeta::new(pool.pool, false));
         accounts.push(AccountMeta::new_readonly(pool.amm_config, false));
         accounts.push(AccountMeta::new(pool.observation_state, false));
+        accounts.push(AccountMeta::new(pool.bitmap_extension, false));
         accounts.push(AccountMeta::new(pool.x_vault, false));
         accounts.push(AccountMeta::new(pool.y_vault, false));
         for tick_array in &pool.tick_arrays {
@@ -242,7 +245,23 @@ fn create_swap_instruction(
         }
     }
 
-    let mut data = vec![14u8];
+    for pool in &mint_pool_data.meteora_damm_pools {
+        accounts.push(AccountMeta::new_readonly(damm_program_id(), false));
+        accounts.push(AccountMeta::new_readonly(vault_program_id(), false));
+        accounts.push(AccountMeta::new(pool.pool, false));
+        accounts.push(AccountMeta::new(pool.token_x_vault, false));
+        accounts.push(AccountMeta::new(pool.token_sol_vault, false));
+        accounts.push(AccountMeta::new(pool.token_x_token_vault, false));
+        accounts.push(AccountMeta::new(pool.token_sol_token_vault, false));
+        accounts.push(AccountMeta::new(pool.token_x_lp_mint, false));
+        accounts.push(AccountMeta::new(pool.token_sol_lp_mint, false));
+        accounts.push(AccountMeta::new(pool.token_x_pool_lp, false));
+        accounts.push(AccountMeta::new(pool.token_sol_pool_lp, false));
+        accounts.push(AccountMeta::new(pool.admin_token_fee_x, false));
+        accounts.push(AccountMeta::new(pool.admin_token_fee_sol, false));
+    }
+
+    let mut data = vec![15u8];
 
     let minimum_profit: u64 = 0;
     let max_bin_to_process: u64 = 20;

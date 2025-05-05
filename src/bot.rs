@@ -123,6 +123,7 @@ pub async fn run_bot(config_path: &str) -> anyhow::Result<()> {
             mint_config.meteora_dlmm_pool_list.as_ref(),
             mint_config.whirlpool_pool_list.as_ref(),
             mint_config.raydium_clmm_pool_list.as_ref(),
+            mint_config.meteora_damm_pool_list.as_ref(),
             rpc_client.clone(),
         )
         .await?;

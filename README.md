@@ -4,7 +4,7 @@ A simple Solana onchain arbitrage bot for arbitrage opportunities. This bot calc
 
 This is a demo bot to show how to parse each pool and call the onchain program.
 
-Full documentation on the onchain program:
+Full documentation for the onchain program:
 https://docs.solanamevbot.com/home/onchain-bot/onchain-program
 
 Full functional bot:
