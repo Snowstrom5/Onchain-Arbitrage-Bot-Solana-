@@ -3,12 +3,15 @@ use crate::refresh::initialize_pool_data;
 use crate::transaction::build_and_send_transaction;
 use anyhow::Context;
 use solana_client::rpc_client::RpcClient;
-use solana_sdk::address_lookup_table::state::AddressLookupTable;
 use solana_sdk::address_lookup_table::AddressLookupTableAccount;
 use solana_sdk::hash::Hash;
 use solana_sdk::pubkey::Pubkey;
 use solana_sdk::signature::Keypair;
 use solana_sdk::signer::Signer;
+use solana_sdk::{
+    address_lookup_table::state::AddressLookupTable, compute_budget::ComputeBudgetInstruction,
+};
+use spl_associated_token_account::get_associated_token_address;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
@@ -48,6 +51,65 @@ pub async fn run_bot(config_path: &str) -> anyhow::Result<()> {
     tokio::spawn(async move {
         blockhash_refresher(blockhash_client, blockhash_cache, refresh_interval).await;
     });
+
+    for mint_config in &config.routing.mint_config_list {
+        let wallet_token_account = get_associated_token_address(
+            &wallet_kp.pubkey(),
+            &Pubkey::from_str(&mint_config.mint).unwrap(),
+        );
+
+        println!("   Token mint: {}", mint_config.mint);
+        println!("   Wallet token ATA: {}", wallet_token_account);
+        // Check if the PWEASE token account exists and create it if it doesn't
+        println!("\n   Checking if token account exists...");
+        loop {
+            match rpc_client.get_account(&wallet_token_account) {
+                Ok(_) => {
+                    println!("   token account exists!");
+                    break;
+                }
+                Err(_) => {
+                    println!("   token account does not exist. Creating it...");
+
+                    // Create the instruction to create the associated token account
+                    let create_ata_ix =
+                            spl_associated_token_account::instruction::create_associated_token_account_idempotent(
+                                &wallet_kp.pubkey(), // Funding account
+                                &wallet_kp.pubkey(), // Wallet account
+                                &Pubkey::from_str(&mint_config.mint).unwrap(),   // Token mint
+                                &spl_token::ID,      // Token program
+                            );
+
+                    // Get a recent blockhash
+                    let blockhash = rpc_client.get_latest_blockhash()?;
+
+                    let compute_unit_price_ix =
+                        ComputeBudgetInstruction::set_compute_unit_price(1_000_000);
+                    let compute_unit_limit_ix =
+                        ComputeBudgetInstruction::set_compute_unit_limit(60_000);
+
+                    // Create the transaction
+                    let create_ata_tx = solana_sdk::transaction::Transaction::new_signed_with_payer(
+                        &[compute_unit_price_ix, compute_unit_limit_ix, create_ata_ix],
+                        Some(&wallet_kp.pubkey()),
+                        &[&wallet_kp],
+                        blockhash,
+                    );
+
+                    // Send the transaction
+                    match rpc_client.send_and_confirm_transaction(&create_ata_tx) {
+                        Ok(sig) => {
+                            println!("   token account created successfully! Signature: {}", sig);
+                        }
+                        Err(e) => {
+                            println!("   Failed to create token account: {:?}", e);
+                            return Err(anyhow::anyhow!("Failed to create token account"));
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     for mint_config in &config.routing.mint_config_list {
         info!("Processing mint: {}", mint_config.mint);

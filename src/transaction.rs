@@ -18,7 +18,7 @@ use std::sync::Arc;
 use tracing::{debug, error, info};
 
 use crate::constants::sol_mint;
-use crate::dex::dlmm::constants::{dlmm_event_authority, dlmm_program_id};
+use crate::dex::meteora::constants::{dlmm_event_authority, dlmm_program_id};
 use crate::dex::pump::constants::{pump_fee_wallet, pump_program_id};
 use crate::dex::raydium::constants::{
     raydium_clmm_program_id, raydium_cp_program_id, raydium_program_id,

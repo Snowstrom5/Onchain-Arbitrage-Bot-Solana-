@@ -1,4 +1,4 @@
-use crate::dex::dlmm::constants::{dlmm_program_id, BIN_ARRAY};
+use crate::dex::meteora::constants::{dlmm_program_id, BIN_ARRAY};
 use anyhow::Result;
 use solana_program::pubkey::Pubkey;
 use std::mem::size_of;
@@ -119,8 +119,6 @@ impl DlmmInfo {
             lb_pair,
         })
     }
-
-
 
     pub fn get_token_and_sol_vaults(&self, mint: &Pubkey, sol_mint: &Pubkey) -> (Pubkey, Pubkey) {
         let token_vault;
