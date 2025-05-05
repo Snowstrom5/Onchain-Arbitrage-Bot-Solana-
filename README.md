@@ -21,6 +21,18 @@ https://solscan.io/tx/2JtgbXAgwPib9L5Ruc5vLhQ5qeX5EMhVDQbcCaAYVJKpEFn22ArEqXhipu
 - Kamino flashloan integration
 - Parse all available pool types (Raydium, DLMM, Whirlpool, etc.)
 
+## Supported Dexes
+
+- Pump AMM
+- Raydium V4
+- Raydium CPMM
+- Raydium CLMM
+- Meteora DLMM
+- Meteora Dynamic AMM
+- Orca Whirlpool
+
+Trading between Raycium CLMM/Meteora DLMM/Orca Whirlpool is not fully supported, only DLMM<->DLMM is currently supported.
+
 ## Getting Started
 
 ### Prerequisites
@@ -70,6 +82,7 @@ https://solscan.io/tx/2JtgbXAgwPib9L5Ruc5vLhQ5qeX5EMhVDQbcCaAYVJKpEFn22ArEqXhipu
 - `mint_config_list`: List of mints to process
   - `mint`: Mint address
   - `raydium_pool_list`: List of Raydium pool addresses
+  - `meteora_damm_pool_list`: List of Meteora Dynamic AMM pool addresses
   - `meteora_dlmm_pool_list`: List of Meteora DLMM pool addresses
   - `raydium_cp_pool_list`: List of Raydium CP pool addresses
   - `pump_pool_list`: List of Pump pool addresses
