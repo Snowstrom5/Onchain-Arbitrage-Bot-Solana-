@@ -59,6 +59,21 @@ pub struct RaydiumClmmPool {
 }
 
 #[derive(Debug, Clone)]
+pub struct MeteoraDAmmPool {
+    pub pool: Pubkey,
+    pub token_x_vault: Pubkey,
+    pub token_sol_vault: Pubkey,
+    pub token_x_token_vault: Pubkey,
+    pub token_sol_token_vault: Pubkey,
+    pub token_x_lp_mint: Pubkey,
+    pub token_sol_lp_mint: Pubkey,
+    pub token_x_pool_lp: Pubkey,
+    pub token_sol_pool_lp: Pubkey,
+    pub admin_token_fee_x: Pubkey,
+    pub admin_token_fee_sol: Pubkey,
+}
+
+#[derive(Debug, Clone)]
 pub struct MintPoolData {
     pub mint: Pubkey,
     pub wallet_account: Pubkey,
@@ -69,6 +84,7 @@ pub struct MintPoolData {
     pub dlmm_pairs: Vec<DlmmPool>,
     pub whirlpool_pools: Vec<WhirlpoolPool>,
     pub raydium_clmm_pools: Vec<RaydiumClmmPool>,
+    pub meteora_damm_pools: Vec<MeteoraDAmmPool>,
 }
 
 impl MintPoolData {
@@ -87,6 +103,7 @@ impl MintPoolData {
             dlmm_pairs: Vec::new(),
             whirlpool_pools: Vec::new(),
             raydium_clmm_pools: Vec::new(),
+            meteora_damm_pools: Vec::new(),
         })
     }
 
@@ -215,6 +232,36 @@ impl MintPoolData {
             y_vault: Pubkey::from_str(y_vault)?,
             bitmap_extension,
             tick_arrays: tick_array_pubkeys,
+        });
+        Ok(())
+    }
+
+    pub fn add_meteora_damm_pool(
+        &mut self,
+        pool: &str,
+        token_x_vault: &str,
+        token_sol_vault: &str,
+        token_x_token_vault: &str,
+        token_sol_token_vault: &str,
+        token_x_lp_mint: &str,
+        token_sol_lp_mint: &str,
+        token_x_pool_lp: &str,
+        token_sol_pool_lp: &str,
+        admin_token_fee_x: &str,
+        admin_token_fee_sol: &str,
+    ) -> anyhow::Result<()> {
+        self.meteora_damm_pools.push(MeteoraDAmmPool {
+            pool: Pubkey::from_str(pool)?,
+            token_x_vault: Pubkey::from_str(token_x_vault)?,
+            token_sol_vault: Pubkey::from_str(token_sol_vault)?,
+            token_x_token_vault: Pubkey::from_str(token_x_token_vault)?,
+            token_sol_token_vault: Pubkey::from_str(token_sol_token_vault)?,
+            token_x_lp_mint: Pubkey::from_str(token_x_lp_mint)?,
+            token_sol_lp_mint: Pubkey::from_str(token_sol_lp_mint)?,
+            token_x_pool_lp: Pubkey::from_str(token_x_pool_lp)?,
+            token_sol_pool_lp: Pubkey::from_str(token_sol_pool_lp)?,
+            admin_token_fee_x: Pubkey::from_str(admin_token_fee_x)?,
+            admin_token_fee_sol: Pubkey::from_str(admin_token_fee_sol)?,
         });
         Ok(())
     }

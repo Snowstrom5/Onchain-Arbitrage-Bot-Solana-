@@ -1,4 +1,5 @@
 use crate::constants::sol_mint;
+use crate::dex::meteora::constants::damm_program_id;
 use crate::dex::meteora::{constants::dlmm_program_id, dlmm_info::DlmmInfo};
 use crate::dex::pump::{pump_fee_wallet, pump_program_id, PumpAmmInfo};
 use crate::dex::raydium::{
@@ -25,6 +26,7 @@ pub async fn initialize_pool_data(
     dlmm_pools: Option<&Vec<String>>,
     whirlpool_pools: Option<&Vec<String>>,
     raydium_clmm_pools: Option<&Vec<String>>,
+    meteora_damm_pools: Option<&Vec<String>>,
     rpc_client: Arc<RpcClient>,
 ) -> anyhow::Result<MintPoolData> {
     info!("Initializing pool data for mint: {}", mint);
@@ -553,6 +555,128 @@ pub async fn initialize_pool_data(
                         pool_address, e
                     );
                     continue;
+                }
+            }
+        }
+    }
+
+    if let Some(pools) = meteora_damm_pools {
+        for pool_address in pools {
+            let meteora_damm_pool_pubkey = Pubkey::from_str(pool_address)?;
+
+            match rpc_client.get_account(&meteora_damm_pool_pubkey) {
+                Ok(account) => {
+                    if account.owner != damm_program_id() {
+                        error!(
+                            "Error: Meteora DAMM pool account is not owned by the Meteora DAMM program. Expected: {}, Actual: {}",
+                            damm_program_id(), account.owner
+                        );
+                        return Err(anyhow::anyhow!(
+                            "Meteora DAMM pool account is not owned by the Meteora DAMM program"
+                        ));
+                    }
+
+                    match meteora_damm_cpi::Pool::deserialize_unchecked(&account.data) {
+                        Ok(pool) => {
+                            if pool.token_a_mint != pool_data.mint
+                                && pool.token_b_mint != pool_data.mint
+                            {
+                                error!(
+                                    "Mint {} is not present in Meteora DAMM pool {}, skipping",
+                                    pool_data.mint, meteora_damm_pool_pubkey
+                                );
+                                return Err(anyhow::anyhow!(
+                                    "Invalid Meteora DAMM pool: {}",
+                                    meteora_damm_pool_pubkey
+                                ));
+                            }
+
+                            let sol_mint = sol_mint();
+                            if pool.token_a_mint != sol_mint && pool.token_b_mint != sol_mint {
+                                error!(
+                                    "SOL is not present in Meteora DAMM pool {}",
+                                    meteora_damm_pool_pubkey
+                                );
+                                return Err(anyhow::anyhow!(
+                                    "SOL is not present in Meteora DAMM pool: {}",
+                                    meteora_damm_pool_pubkey
+                                ));
+                            }
+
+                            let (x_vault, sol_vault) = if sol_mint == pool.token_a_mint {
+                                (pool.b_vault, pool.a_vault)
+                            } else {
+                                (pool.a_vault, pool.b_vault)
+                            };
+
+                            // Fetch vault accounts
+                            let x_vault_data = rpc_client.get_account(&x_vault)?;
+                            let sol_vault_data = rpc_client.get_account(&sol_vault)?;
+
+                            let x_vault_obj = meteora_vault_cpi::Vault::deserialize_unchecked(
+                                &mut x_vault_data.data.as_slice(),
+                            )?;
+                            let sol_vault_obj = meteora_vault_cpi::Vault::deserialize_unchecked(
+                                &mut sol_vault_data.data.as_slice(),
+                            )?;
+
+                            let x_token_vault = x_vault_obj.token_vault;
+                            let sol_token_vault = sol_vault_obj.token_vault;
+                            let x_lp_mint = x_vault_obj.lp_mint;
+                            let sol_lp_mint = sol_vault_obj.lp_mint;
+
+                            let (x_pool_lp, sol_pool_lp) = if sol_mint == pool.token_a_mint {
+                                (pool.b_vault_lp, pool.a_vault_lp)
+                            } else {
+                                (pool.a_vault_lp, pool.b_vault_lp)
+                            };
+
+                            let (x_admin_fee, sol_admin_fee) = if sol_mint == pool.token_a_mint {
+                                (pool.admin_token_b_fee, pool.admin_token_a_fee)
+                            } else {
+                                (pool.admin_token_a_fee, pool.admin_token_b_fee)
+                            };
+
+                            pool_data.add_meteora_damm_pool(
+                                pool_address,
+                                &x_vault.to_string(),
+                                &sol_vault.to_string(),
+                                &x_token_vault.to_string(),
+                                &sol_token_vault.to_string(),
+                                &x_lp_mint.to_string(),
+                                &sol_lp_mint.to_string(),
+                                &x_pool_lp.to_string(),
+                                &sol_pool_lp.to_string(),
+                                &x_admin_fee.to_string(),
+                                &sol_admin_fee.to_string(),
+                            )?;
+
+                            info!("Meteora DAMM pool added: {}", pool_address);
+                            info!("    Token X vault: {}", x_token_vault.to_string());
+                            info!("    SOL vault: {}", sol_token_vault.to_string());
+                            info!("    Token X LP mint: {}", x_lp_mint.to_string());
+                            info!("    SOL LP mint: {}", sol_lp_mint.to_string());
+                            info!("    Token X pool LP: {}", x_pool_lp.to_string());
+                            info!("    SOL pool LP: {}", sol_pool_lp.to_string());
+                            info!("    Token X admin fee: {}", x_admin_fee.to_string());
+                            info!("    SOL admin fee: {}", sol_admin_fee.to_string());
+                            info!("");
+                        }
+                        Err(e) => {
+                            error!(
+                                "Error parsing Meteora DAMM pool data from pool {}: {:?}",
+                                meteora_damm_pool_pubkey, e
+                            );
+                            return Err(anyhow::anyhow!("Error parsing Meteora DAMM pool data"));
+                        }
+                    }
+                }
+                Err(e) => {
+                    error!(
+                        "Error fetching Meteora DAMM pool account {}: {:?}",
+                        meteora_damm_pool_pubkey, e
+                    );
+                    return Err(anyhow::anyhow!("Error fetching Meteora DAMM pool account"));
                 }
             }
         }

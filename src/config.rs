@@ -24,12 +24,18 @@ pub struct RoutingConfig {
 #[derive(Debug, Deserialize, Clone)]
 pub struct MintConfig {
     pub mint: String,
+
     pub raydium_pool_list: Option<Vec<String>>,
-    pub meteora_dlmm_pool_list: Option<Vec<String>>,
     pub raydium_cp_pool_list: Option<Vec<String>>,
-    pub pump_pool_list: Option<Vec<String>>,
-    pub whirlpool_pool_list: Option<Vec<String>>,
     pub raydium_clmm_pool_list: Option<Vec<String>>,
+
+    pub meteora_dlmm_pool_list: Option<Vec<String>>,
+    pub meteora_damm_pool_list: Option<Vec<String>>,
+
+    pub pump_pool_list: Option<Vec<String>>,
+
+    pub whirlpool_pool_list: Option<Vec<String>>,
+
     pub lookup_table_accounts: Option<Vec<String>>,
     pub process_delay: u64,
 }
