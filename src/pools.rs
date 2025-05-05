@@ -1,4 +1,7 @@
-use crate::constants::SOL_MINT;
+use crate::{
+    constants::SOL_MINT,
+    dex::raydium::{clmm_info::POOL_TICK_ARRAY_BITMAP_SEED, raydium_clmm_program_id},
+};
 use solana_program::pubkey::Pubkey;
 use std::str::FromStr;
 
@@ -49,6 +52,7 @@ pub struct RaydiumClmmPool {
     pub pool: Pubkey,
     pub amm_config: Pubkey,
     pub observation_state: Pubkey,
+    pub bitmap_extension: Pubkey,
     pub x_vault: Pubkey,
     pub y_vault: Pubkey,
     pub tick_arrays: Vec<Pubkey>,
@@ -189,17 +193,27 @@ impl MintPoolData {
         y_vault: &str,
         tick_arrays: Vec<&str>,
     ) -> anyhow::Result<()> {
+        let pool_pubkey = Pubkey::from_str(pool)?;
+        let bitmap_extension = Pubkey::find_program_address(
+            &[
+                POOL_TICK_ARRAY_BITMAP_SEED.as_bytes(),
+                &pool_pubkey.as_ref(),
+            ],
+            &raydium_clmm_program_id(),
+        )
+        .0;
         let tick_array_pubkeys = tick_arrays
             .iter()
             .map(|&s| Pubkey::from_str(s))
             .collect::<Result<Vec<_>, _>>()?;
 
         self.raydium_clmm_pools.push(RaydiumClmmPool {
-            pool: Pubkey::from_str(pool)?,
+            pool: pool_pubkey,
             amm_config: Pubkey::from_str(amm_config)?,
             observation_state: Pubkey::from_str(observation_state)?,
             x_vault: Pubkey::from_str(x_vault)?,
             y_vault: Pubkey::from_str(y_vault)?,
+            bitmap_extension,
             tick_arrays: tick_array_pubkeys,
         });
         Ok(())

@@ -6,6 +6,8 @@ pub const TICK_ARRAY_SIZE: i32 = 60;
 pub const TICK_ARRAY_SIZE_USIZE: usize = 60;
 pub const REWARD_NUM: usize = 3;
 
+pub const POOL_TICK_ARRAY_BITMAP_SEED: &str = "pool_tick_array_bitmap_extension";
+
 pub enum RewardState {
     Uninitialized,
     Initialized,

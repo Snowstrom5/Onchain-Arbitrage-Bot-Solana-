@@ -235,6 +235,7 @@ fn create_swap_instruction(
         accounts.push(AccountMeta::new(pool.pool, false));
         accounts.push(AccountMeta::new_readonly(pool.amm_config, false));
         accounts.push(AccountMeta::new(pool.observation_state, false));
+        accounts.push(AccountMeta::new(pool.bitmap_extension, false));
         accounts.push(AccountMeta::new(pool.x_vault, false));
         accounts.push(AccountMeta::new(pool.y_vault, false));
         for tick_array in &pool.tick_arrays {
@@ -242,7 +243,7 @@ fn create_swap_instruction(
         }
     }
 
-    let mut data = vec![14u8];
+    let mut data = vec![15u8];
 
     let minimum_profit: u64 = 0;
     let max_bin_to_process: u64 = 20;
