@@ -47,5 +47,5 @@ clap = "3.2"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
-meteora-damm-cpi = { path = "lib/meteora-damm" }
-meteora-vault-cpi = { path = "lib/meteora-vault" }
+meteora-damm-cpi = { path = "lib/meteora-damm", features = ["no-entrypoint"] }
+meteora-vault-cpi = { path = "lib/meteora-vault", features = ["no-entrypoint"] }
