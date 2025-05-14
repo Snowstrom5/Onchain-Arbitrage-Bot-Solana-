@@ -74,11 +74,19 @@ pub async fn initialize_pool_data(
                                     &amm_info.quote_mint,
                                 );
 
+                            let coin_creator_vault_ata =
+                                spl_associated_token_account::get_associated_token_address(
+                                    &amm_info.coin_creator_vault_authority,
+                                    &amm_info.quote_mint,
+                                );
+
                             pool_data.add_pump_pool(
                                 pool_address,
                                 &token_vault.to_string(),
                                 &sol_vault.to_string(),
                                 &fee_token_wallet.to_string(),
+                                &coin_creator_vault_ata.to_string(),
+                                &amm_info.coin_creator_vault_authority.to_string(),
                             )?;
                             info!("Pump pool added: {}", pool_address);
                             info!("    Base mint: {}", amm_info.base_mint.to_string());
@@ -86,6 +94,14 @@ pub async fn initialize_pool_data(
                             info!("    Token vault: {}", token_vault.to_string());
                             info!("    Sol vault: {}", sol_vault.to_string());
                             info!("    Fee token wallet: {}", fee_token_wallet.to_string());
+                            info!(
+                                "    Coin creator vault ata: {}",
+                                coin_creator_vault_ata.to_string()
+                            );
+                            info!(
+                                "    Coin creator vault authority: {}",
+                                amm_info.coin_creator_vault_authority.to_string()
+                            );
                             info!("    Initialized Pump pool: {}\n", pump_pool_pubkey);
                         }
                         Err(e) => {

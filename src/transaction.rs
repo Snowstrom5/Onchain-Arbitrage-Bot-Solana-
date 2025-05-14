@@ -207,6 +207,11 @@ fn create_swap_instruction(
         accounts.push(AccountMeta::new(pool.token_vault, false));
         accounts.push(AccountMeta::new(pool.sol_vault, false));
         accounts.push(AccountMeta::new(pool.fee_token_wallet, false));
+        accounts.push(AccountMeta::new(pool.coin_creator_vault_ata, false));
+        accounts.push(AccountMeta::new_readonly(
+            pool.coin_creator_vault_authority,
+            false,
+        ));
     }
 
     for pair in &mint_pool_data.dlmm_pairs {
@@ -264,10 +269,23 @@ fn create_swap_instruction(
     let mut data = vec![15u8];
 
     let minimum_profit: u64 = 0;
+    /*
+        max_bin_to_process is how many bins the program can look through when calculating optimal trade size.
+        Each bin lookup will take ~10k compute units. So you should setup your compute unit limit accordingly.
+        For example, I usually use 650_000 compute unit limit with max_bin_to_process = 30.
+        The full bot uses the following code to calculate this number:
+
+        let bins = ((config.bot.compute_unit_limit - 300_000 - if enable_kamino { 80_000 } else { 0 })
+            / 10_000) as u64;
+        Here we just use a default value of 20 for demonstration purposes.
+    */
     let max_bin_to_process: u64 = 20;
+    // When true, the bot will not fail the transaction even when it can't find a profitable arbitrage. It will just do nothing and succeed.
+    let no_failure_mode = false;
 
     data.extend_from_slice(&minimum_profit.to_le_bytes());
     data.extend_from_slice(&max_bin_to_process.to_le_bytes());
+    data.extend_from_slice(if no_failure_mode { &[1] } else { &[0] });
 
     Ok(Instruction {
         program_id: executor_program_id,

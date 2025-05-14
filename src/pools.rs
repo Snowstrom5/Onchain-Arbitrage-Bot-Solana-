@@ -27,6 +27,8 @@ pub struct PumpPool {
     pub token_vault: Pubkey,
     pub sol_vault: Pubkey,
     pub fee_token_wallet: Pubkey,
+    pub coin_creator_vault_ata: Pubkey,
+    pub coin_creator_vault_authority: Pubkey,
 }
 
 #[derive(Debug, Clone)]
@@ -145,12 +147,16 @@ impl MintPoolData {
         token_vault: &str,
         sol_vault: &str,
         fee_token_wallet: &str,
+        coin_creator_vault_ata: &str,
+        coin_creator_authority: &str,
     ) -> anyhow::Result<()> {
         self.pump_pools.push(PumpPool {
             pool: Pubkey::from_str(pool)?,
             token_vault: Pubkey::from_str(token_vault)?,
             sol_vault: Pubkey::from_str(sol_vault)?,
             fee_token_wallet: Pubkey::from_str(fee_token_wallet)?,
+            coin_creator_vault_ata: Pubkey::from_str(coin_creator_vault_ata)?,
+            coin_creator_vault_authority: Pubkey::from_str(coin_creator_authority)?,
         });
         Ok(())
     }
