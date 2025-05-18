@@ -31,8 +31,6 @@ https://solscan.io/tx/2JtgbXAgwPib9L5Ruc5vLhQ5qeX5EMhVDQbcCaAYVJKpEFn22ArEqXhipu
 - Meteora Dynamic AMM
 - Orca Whirlpool
 
-Trading between Raycium CLMM/Meteora DLMM/Orca Whirlpool is not fully supported, only DLMM<->DLMM is currently supported.
-
 ## Getting Started
 
 ### Prerequisites
