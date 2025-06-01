@@ -15,6 +15,9 @@ https://docs.solanamevbot.com/home/onchain-bot/getting-started
 Example transaction:
 https://solscan.io/tx/2JtgbXAgwPib9L5Ruc5vLhQ5qeX5EMhVDQbcCaAYVJKpEFn22ArEqXhipu5fFyhrEwosiHWzRUhWispJUCYyAnKT
 
+Program:
+https://solscan.io/account/MEViEnscUm6tsQRoGd9h6nLQaQspKj7DB2M5FwM3Xvz
+
 ## Features
 
 - Load configuration from a config file
