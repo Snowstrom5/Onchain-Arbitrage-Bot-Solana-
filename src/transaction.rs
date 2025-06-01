@@ -1,8 +1,6 @@
 use crate::config::Config;
 use crate::dex::raydium::{raydium_authority, raydium_cp_authority};
-use crate::kamino::{
-    get_kamino_flashloan_borrow_ix, get_kamino_flashloan_repay_ix, KAMINO_ADDITIONAL_COMPUTE_UNITS,
-};
+use crate::dex::solfi::constants::solfi_program_id;
 use crate::pools::MintPoolData;
 use solana_client::rpc_client::RpcClient;
 use solana_program::instruction::Instruction;
@@ -19,7 +17,8 @@ use tracing::{debug, error, info};
 
 use crate::constants::sol_mint;
 use crate::dex::meteora::constants::{
-    damm_program_id, dlmm_event_authority, dlmm_program_id, vault_program_id,
+    damm_program_id, damm_v2_event_authority, damm_v2_pool_authority, damm_v2_program_id,
+    dlmm_event_authority, dlmm_program_id, vault_program_id,
 };
 use crate::dex::pump::constants::{pump_fee_wallet, pump_program_id};
 use crate::dex::raydium::constants::{
@@ -41,17 +40,8 @@ pub async fn build_and_send_transaction(
     blockhash: Hash,
     address_lookup_table_accounts: &[AddressLookupTableAccount],
 ) -> anyhow::Result<Vec<Signature>> {
-    let enable_kamino = config
-        .kamino_flashloan
-        .as_ref()
-        .map_or(false, |k| k.enabled);
-    let compute_unit_limit = config.bot.compute_unit_limit
-        + if enable_kamino {
-            KAMINO_ADDITIONAL_COMPUTE_UNITS
-        } else {
-            0
-        };
-
+    let enable_flashloan = config.flashloan.as_ref().map_or(false, |k| k.enabled);
+    let compute_unit_limit = config.bot.compute_unit_limit;
     let mut instructions = vec![];
     // Add a random number here to make each transaction unique
     let compute_budget_ix = ComputeBudgetInstruction::set_compute_unit_limit(
@@ -64,30 +54,17 @@ pub async fn build_and_send_transaction(
         ComputeBudgetInstruction::set_compute_unit_price(compute_unit_price);
     instructions.push(compute_budget_price_ix);
 
-    let swap_ix = create_swap_instruction(wallet_kp, mint_pool_data)?;
+    let swap_ix = create_swap_instruction(
+        wallet_kp,
+        mint_pool_data,
+        compute_unit_limit as u64,
+        enable_flashloan,
+    )?;
 
     let mut all_instructions = instructions.clone();
-    if enable_kamino {
-        debug!("Adding Kamino flashloan borrow instruction");
-        let borrow_ix = get_kamino_flashloan_borrow_ix(
-            &wallet_kp.pubkey(),
-            mint_pool_data.wallet_wsol_account,
-        )?;
-        all_instructions.push(borrow_ix);
-    }
 
     debug!("Adding swap instruction");
     all_instructions.push(swap_ix);
-
-    if enable_kamino {
-        debug!("Adding Kamino flashloan repay instruction");
-        let repay_ix = get_kamino_flashloan_repay_ix(
-            &wallet_kp.pubkey(),
-            mint_pool_data.wallet_wsol_account,
-            2, // Borrow instruction index
-        )?;
-        all_instructions.push(repay_ix);
-    }
 
     let message = Message::try_compile(
         &wallet_kp.pubkey(),
@@ -146,10 +123,17 @@ async fn send_transaction_with_retries(
     )?)
 }
 
+/// Helper function to derive the vault token account PDA address for a given mint
+pub fn derive_vault_token_account(program_id: &Pubkey, mint: &Pubkey) -> (Pubkey, u8) {
+    Pubkey::find_program_address(&[b"vault_token_account", mint.as_ref()], program_id)
+}
+
 // See https://docs.solanamevbot.com/home/onchain-bot/onchain-program for more information
 fn create_swap_instruction(
     wallet_kp: &Keypair,
     mint_pool_data: &MintPoolData,
+    compute_unit_limit: u64,
+    use_flashloan: bool,
 ) -> anyhow::Result<Instruction> {
     debug!("Creating swap instruction for all DEX types");
 
@@ -160,6 +144,8 @@ fn create_swap_instruction(
     let pump_global_config =
         Pubkey::from_str("ADyA8hdefvWN2dbGGWFotbzWxrAvLW83WG6QCVXvJKqw").unwrap();
     let pump_authority = Pubkey::from_str("GS4CU59F31iL7aR2Q8zVS8DRrcRnXX1yjQ66TqNVQnaR").unwrap();
+    let sysvar_instructions =
+        Pubkey::from_str("Sysvar1nstructions1111111111111111111111111").unwrap();
 
     let wallet = wallet_kp.pubkey();
     let sol_mint_pubkey = sol_mint();
@@ -174,6 +160,20 @@ fn create_swap_instruction(
         AccountMeta::new_readonly(system_program::ID, false), // 5. System program
         AccountMeta::new_readonly(associated_token_program_id, false), // 6. Associated Token program
     ];
+
+    let base_mint = sol_mint_pubkey;
+
+    if use_flashloan {
+        accounts.push(AccountMeta::new_readonly(
+            Pubkey::from_str("5LFpzqgsxrSfhKwbaFiAEJ2kbc9QyimjKueswsyU4T3o").unwrap(),
+            false,
+        ));
+        let token_pda = derive_vault_token_account(
+            &Pubkey::from_str("MEViEnscUm6tsQRoGd9h6nLQaQspKj7DB2M5FwM3Xvz").unwrap(),
+            &base_mint,
+        );
+        accounts.push(AccountMeta::new(token_pda.0, false));
+    }
 
     accounts.push(AccountMeta::new_readonly(mint_pool_data.mint, false));
     let wallet_x_account =
@@ -266,26 +266,34 @@ fn create_swap_instruction(
         accounts.push(AccountMeta::new(pool.admin_token_fee_sol, false));
     }
 
-    let mut data = vec![15u8];
+    for pool in &mint_pool_data.meteora_damm_v2_pools {
+        accounts.push(AccountMeta::new_readonly(damm_v2_program_id(), false));
+        accounts.push(AccountMeta::new_readonly(damm_v2_event_authority(), false));
+        accounts.push(AccountMeta::new_readonly(damm_v2_pool_authority(), false));
+        accounts.push(AccountMeta::new(pool.pool, false));
+        accounts.push(AccountMeta::new(pool.token_x_vault, false));
+        accounts.push(AccountMeta::new(pool.token_sol_vault, false));
+    }
+
+    for pool in &mint_pool_data.solfi_pools {
+        accounts.push(AccountMeta::new_readonly(solfi_program_id(), false));
+        accounts.push(AccountMeta::new_readonly(sysvar_instructions, false));
+        accounts.push(AccountMeta::new(pool.pool, false));
+        accounts.push(AccountMeta::new(pool.token_x_vault, false));
+        accounts.push(AccountMeta::new(pool.token_sol_vault, false));
+    }
+
+    let mut data = vec![16u8];
 
     let minimum_profit: u64 = 0;
-    /*
-        max_bin_to_process is how many bins the program can look through when calculating optimal trade size.
-        Each bin lookup will take ~10k compute units. So you should setup your compute unit limit accordingly.
-        For example, I usually use 650_000 compute unit limit with max_bin_to_process = 30.
-        The full bot uses the following code to calculate this number:
-
-        let bins = ((config.bot.compute_unit_limit - 300_000 - if enable_kamino { 80_000 } else { 0 })
-            / 10_000) as u64;
-        Here we just use a default value of 20 for demonstration purposes.
-    */
-    let max_bin_to_process: u64 = 20;
     // When true, the bot will not fail the transaction even when it can't find a profitable arbitrage. It will just do nothing and succeed.
     let no_failure_mode = false;
 
     data.extend_from_slice(&minimum_profit.to_le_bytes());
-    data.extend_from_slice(&max_bin_to_process.to_le_bytes());
+    data.extend_from_slice(&compute_unit_limit.to_le_bytes());
     data.extend_from_slice(if no_failure_mode { &[1] } else { &[0] });
+    data.extend_from_slice(&0u16.to_le_bytes()); // Keep this 0.
+    data.extend_from_slice(if use_flashloan { &[1] } else { &[0] });
 
     Ok(Instruction {
         program_id: executor_program_id,
