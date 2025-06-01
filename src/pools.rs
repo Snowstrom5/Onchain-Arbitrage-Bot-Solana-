@@ -76,6 +76,20 @@ pub struct MeteoraDAmmPool {
 }
 
 #[derive(Debug, Clone)]
+pub struct SolfiPool {
+    pub pool: Pubkey,
+    pub token_x_vault: Pubkey,
+    pub token_sol_vault: Pubkey,
+}
+
+#[derive(Debug, Clone)]
+pub struct MeteoraDAmmV2Pool {
+    pub pool: Pubkey,
+    pub token_x_vault: Pubkey,
+    pub token_sol_vault: Pubkey,
+}
+
+#[derive(Debug, Clone)]
 pub struct MintPoolData {
     pub mint: Pubkey,
     pub wallet_account: Pubkey,
@@ -87,6 +101,8 @@ pub struct MintPoolData {
     pub whirlpool_pools: Vec<WhirlpoolPool>,
     pub raydium_clmm_pools: Vec<RaydiumClmmPool>,
     pub meteora_damm_pools: Vec<MeteoraDAmmPool>,
+    pub solfi_pools: Vec<SolfiPool>,
+    pub meteora_damm_v2_pools: Vec<MeteoraDAmmV2Pool>,
 }
 
 impl MintPoolData {
@@ -106,6 +122,8 @@ impl MintPoolData {
             whirlpool_pools: Vec::new(),
             raydium_clmm_pools: Vec::new(),
             meteora_damm_pools: Vec::new(),
+            solfi_pools: Vec::new(),
+            meteora_damm_v2_pools: Vec::new(),
         })
     }
 
@@ -268,6 +286,34 @@ impl MintPoolData {
             token_sol_pool_lp: Pubkey::from_str(token_sol_pool_lp)?,
             admin_token_fee_x: Pubkey::from_str(admin_token_fee_x)?,
             admin_token_fee_sol: Pubkey::from_str(admin_token_fee_sol)?,
+        });
+        Ok(())
+    }
+
+    pub fn add_solfi_pool(
+        &mut self,
+        pool: &str,
+        token_x_vault: &str,
+        token_sol_vault: &str,
+    ) -> anyhow::Result<()> {
+        self.solfi_pools.push(SolfiPool {
+            pool: Pubkey::from_str(pool)?,
+            token_x_vault: Pubkey::from_str(token_x_vault)?,
+            token_sol_vault: Pubkey::from_str(token_sol_vault)?,
+        });
+        Ok(())
+    }
+
+    pub fn add_meteora_damm_v2_pool(
+        &mut self,
+        pool: &str,
+        token_x_vault: &str,
+        token_sol_vault: &str,
+    ) -> anyhow::Result<()> {
+        self.meteora_damm_v2_pools.push(MeteoraDAmmV2Pool {
+            pool: Pubkey::from_str(pool)?,
+            token_x_vault: Pubkey::from_str(token_x_vault)?,
+            token_sol_vault: Pubkey::from_str(token_sol_vault)?,
         });
         Ok(())
     }

@@ -8,7 +8,7 @@ pub struct Config {
     pub rpc: RpcConfig,
     pub spam: Option<SpamConfig>,
     pub wallet: WalletConfig,
-    pub kamino_flashloan: Option<KaminoFlashloanConfig>,
+    pub flashloan: Option<FlashloanConfig>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -31,10 +31,13 @@ pub struct MintConfig {
 
     pub meteora_dlmm_pool_list: Option<Vec<String>>,
     pub meteora_damm_pool_list: Option<Vec<String>>,
+    pub meteora_damm_v2_pool_list: Option<Vec<String>>,
 
     pub pump_pool_list: Option<Vec<String>>,
 
     pub whirlpool_pool_list: Option<Vec<String>>,
+
+    pub solfi_pool_list: Option<Vec<String>>,
 
     pub lookup_table_accounts: Option<Vec<String>>,
     pub process_delay: u64,
@@ -61,7 +64,7 @@ pub struct WalletConfig {
 }
 
 #[derive(Debug, Deserialize, Clone)]
-pub struct KaminoFlashloanConfig {
+pub struct FlashloanConfig {
     pub enabled: bool,
 }
 
