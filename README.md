@@ -35,6 +35,8 @@ https://solscan.io/account/MEViEnscUm6tsQRoGd9h6nLQaQspKj7DB2M5FwM3Xvz
 - Meteora DLMM
 - Meteora Dynamic AMM
 - Orca Whirlpool
+- SolFi
+- Meteora DAMM V2
 
 ## Getting Started
 
