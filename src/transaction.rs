@@ -1,6 +1,7 @@
 use crate::config::Config;
 use crate::dex::raydium::{raydium_authority, raydium_cp_authority};
 use crate::dex::solfi::constants::solfi_program_id;
+use crate::dex::vertigo::constants::vertigo_program_id;
 use crate::pools::MintPoolData;
 use solana_client::rpc_client::RpcClient;
 use solana_program::instruction::Instruction;
@@ -176,6 +177,10 @@ fn create_swap_instruction(
     }
 
     accounts.push(AccountMeta::new_readonly(mint_pool_data.mint, false));
+    accounts.push(AccountMeta::new_readonly(
+        mint_pool_data.token_program,
+        false,
+    )); // Token program (SPL Token or Token 2022)
     let wallet_x_account =
         spl_associated_token_account::get_associated_token_address(&wallet, &mint_pool_data.mint);
     accounts.push(AccountMeta::new(wallet_x_account, false));
@@ -217,6 +222,9 @@ fn create_swap_instruction(
     for pair in &mint_pool_data.dlmm_pairs {
         accounts.push(AccountMeta::new_readonly(dlmm_program_id(), false));
         accounts.push(AccountMeta::new(dlmm_event_authority(), false)); // DLMM event authority
+        if let Some(memo_program) = pair.memo_program {
+            accounts.push(AccountMeta::new_readonly(memo_program, false)); // Token 2022 memo program
+        }
         accounts.push(AccountMeta::new(pair.pair, false));
         accounts.push(AccountMeta::new(pair.token_vault, false));
         accounts.push(AccountMeta::new(pair.sol_vault, false));
@@ -228,6 +236,9 @@ fn create_swap_instruction(
 
     for pool in &mint_pool_data.whirlpool_pools {
         accounts.push(AccountMeta::new_readonly(whirlpool_program_id(), false));
+        if let Some(memo_program) = pool.memo_program {
+            accounts.push(AccountMeta::new_readonly(memo_program, false)); // Token 2022 memo program
+        }
         accounts.push(AccountMeta::new(pool.pool, false));
         accounts.push(AccountMeta::new(pool.oracle, false));
         accounts.push(AccountMeta::new(pool.x_vault, false));
@@ -239,6 +250,9 @@ fn create_swap_instruction(
 
     for pool in &mint_pool_data.raydium_clmm_pools {
         accounts.push(AccountMeta::new_readonly(raydium_clmm_program_id(), false));
+        if let Some(memo_program) = pool.memo_program {
+            accounts.push(AccountMeta::new_readonly(memo_program, false)); // Token 2022 memo program
+        }
         accounts.push(AccountMeta::new(pool.pool, false));
         accounts.push(AccountMeta::new_readonly(pool.amm_config, false));
         accounts.push(AccountMeta::new(pool.observation_state, false));
@@ -283,7 +297,15 @@ fn create_swap_instruction(
         accounts.push(AccountMeta::new(pool.token_sol_vault, false));
     }
 
-    let mut data = vec![16u8];
+    for pool in &mint_pool_data.vertigo_pools {
+        accounts.push(AccountMeta::new_readonly(vertigo_program_id(), false));
+        accounts.push(AccountMeta::new(pool.pool, false));
+        accounts.push(AccountMeta::new_readonly(pool.pool_owner, false));
+        accounts.push(AccountMeta::new(pool.token_x_vault, false));
+        accounts.push(AccountMeta::new(pool.token_sol_vault, false));
+    }
+
+    let mut data = vec![26u8];
 
     let minimum_profit: u64 = 0;
     // When true, the bot will not fail the transaction even when it can't find a profitable arbitrage. It will just do nothing and succeed.

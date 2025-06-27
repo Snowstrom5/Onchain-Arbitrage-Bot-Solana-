@@ -2,6 +2,7 @@ use crate::{
     constants::SOL_MINT,
     dex::raydium::{clmm_info::POOL_TICK_ARRAY_BITMAP_SEED, raydium_clmm_program_id},
 };
+use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
 use std::str::FromStr;
 
@@ -38,6 +39,7 @@ pub struct DlmmPool {
     pub sol_vault: Pubkey,
     pub oracle: Pubkey,
     pub bin_arrays: Vec<Pubkey>,
+    pub memo_program: Option<Pubkey>, // For Token 2022 support
 }
 
 #[derive(Debug, Clone)]
@@ -47,6 +49,7 @@ pub struct WhirlpoolPool {
     pub x_vault: Pubkey,
     pub y_vault: Pubkey,
     pub tick_arrays: Vec<Pubkey>,
+    pub memo_program: Option<Pubkey>, // For Token 2022 support
 }
 
 #[derive(Debug, Clone)]
@@ -58,6 +61,7 @@ pub struct RaydiumClmmPool {
     pub x_vault: Pubkey,
     pub y_vault: Pubkey,
     pub tick_arrays: Vec<Pubkey>,
+    pub memo_program: Option<Pubkey>, // For Token 2022 support
 }
 
 #[derive(Debug, Clone)]
@@ -90,8 +94,17 @@ pub struct MeteoraDAmmV2Pool {
 }
 
 #[derive(Debug, Clone)]
+pub struct VertigoPool {
+    pub pool: Pubkey,
+    pub pool_owner: Pubkey,
+    pub token_x_vault: Pubkey,
+    pub token_sol_vault: Pubkey,
+}
+
+#[derive(Debug, Clone)]
 pub struct MintPoolData {
     pub mint: Pubkey,
+    pub token_program: Pubkey, // Support for both Token and Token 2022
     pub wallet_account: Pubkey,
     pub wallet_wsol_account: Pubkey,
     pub raydium_pools: Vec<RaydiumPool>,
@@ -103,16 +116,18 @@ pub struct MintPoolData {
     pub meteora_damm_pools: Vec<MeteoraDAmmPool>,
     pub solfi_pools: Vec<SolfiPool>,
     pub meteora_damm_v2_pools: Vec<MeteoraDAmmV2Pool>,
+    pub vertigo_pools: Vec<VertigoPool>,
 }
 
 impl MintPoolData {
-    pub fn new(mint: &str, wallet_account: &str) -> anyhow::Result<Self> {
+    pub fn new(mint: &str, wallet_account: &str, token_program: Pubkey) -> anyhow::Result<Self> {
         let sol_mint = Pubkey::from_str(SOL_MINT)?;
         let wallet_pk = Pubkey::from_str(wallet_account)?;
         let wallet_wsol_pk =
             spl_associated_token_account::get_associated_token_address(&wallet_pk, &sol_mint);
         Ok(Self {
             mint: Pubkey::from_str(mint)?,
+            token_program,
             wallet_account: wallet_pk,
             wallet_wsol_account: wallet_wsol_pk,
             raydium_pools: Vec::new(),
@@ -124,6 +139,7 @@ impl MintPoolData {
             meteora_damm_pools: Vec::new(),
             solfi_pools: Vec::new(),
             meteora_damm_v2_pools: Vec::new(),
+            vertigo_pools: Vec::new(),
         })
     }
 
@@ -186,11 +202,18 @@ impl MintPoolData {
         sol_vault: &str,
         oracle: &str,
         bin_arrays: Vec<&str>,
+        memo_program: Option<&str>,
     ) -> anyhow::Result<()> {
         let bin_array_pubkeys = bin_arrays
             .iter()
             .map(|&s| Pubkey::from_str(s))
             .collect::<Result<Vec<_>, _>>()?;
+
+        let memo_program_pubkey = if let Some(memo) = memo_program {
+            Some(Pubkey::from_str(memo)?)
+        } else {
+            None
+        };
 
         self.dlmm_pairs.push(DlmmPool {
             pair: Pubkey::from_str(pair)?,
@@ -198,6 +221,7 @@ impl MintPoolData {
             sol_vault: Pubkey::from_str(sol_vault)?,
             oracle: Pubkey::from_str(oracle)?,
             bin_arrays: bin_array_pubkeys,
+            memo_program: memo_program_pubkey,
         });
         Ok(())
     }
@@ -209,11 +233,18 @@ impl MintPoolData {
         x_vault: &str,
         y_vault: &str,
         tick_arrays: Vec<&str>,
+        memo_program: Option<&str>,
     ) -> anyhow::Result<()> {
         let tick_array_pubkeys = tick_arrays
             .iter()
             .map(|&s| Pubkey::from_str(s))
             .collect::<Result<Vec<_>, _>>()?;
+
+        let memo_program_pubkey = if let Some(memo) = memo_program {
+            Some(Pubkey::from_str(memo)?)
+        } else {
+            None
+        };
 
         self.whirlpool_pools.push(WhirlpoolPool {
             pool: Pubkey::from_str(pool)?,
@@ -221,6 +252,7 @@ impl MintPoolData {
             x_vault: Pubkey::from_str(x_vault)?,
             y_vault: Pubkey::from_str(y_vault)?,
             tick_arrays: tick_array_pubkeys,
+            memo_program: memo_program_pubkey,
         });
         Ok(())
     }
@@ -233,6 +265,7 @@ impl MintPoolData {
         x_vault: &str,
         y_vault: &str,
         tick_arrays: Vec<&str>,
+        memo_program: Option<&str>,
     ) -> anyhow::Result<()> {
         let pool_pubkey = Pubkey::from_str(pool)?;
         let bitmap_extension = Pubkey::find_program_address(
@@ -248,6 +281,12 @@ impl MintPoolData {
             .map(|&s| Pubkey::from_str(s))
             .collect::<Result<Vec<_>, _>>()?;
 
+        let memo_program_pubkey = if let Some(memo) = memo_program {
+            Some(Pubkey::from_str(memo)?)
+        } else {
+            None
+        };
+
         self.raydium_clmm_pools.push(RaydiumClmmPool {
             pool: pool_pubkey,
             amm_config: Pubkey::from_str(amm_config)?,
@@ -256,6 +295,7 @@ impl MintPoolData {
             y_vault: Pubkey::from_str(y_vault)?,
             bitmap_extension,
             tick_arrays: tick_array_pubkeys,
+            memo_program: memo_program_pubkey,
         });
         Ok(())
     }
@@ -312,6 +352,22 @@ impl MintPoolData {
     ) -> anyhow::Result<()> {
         self.meteora_damm_v2_pools.push(MeteoraDAmmV2Pool {
             pool: Pubkey::from_str(pool)?,
+            token_x_vault: Pubkey::from_str(token_x_vault)?,
+            token_sol_vault: Pubkey::from_str(token_sol_vault)?,
+        });
+        Ok(())
+    }
+
+    pub fn add_vertigo_pool(
+        &mut self,
+        pool: &str,
+        pool_owner: &str,
+        token_x_vault: &str,
+        token_sol_vault: &str,
+    ) -> anyhow::Result<()> {
+        self.vertigo_pools.push(VertigoPool {
+            pool: Pubkey::from_str(pool)?,
+            pool_owner: Pubkey::from_str(pool_owner)?,
             token_x_vault: Pubkey::from_str(token_x_vault)?,
             token_sol_vault: Pubkey::from_str(token_sol_vault)?,
         });
