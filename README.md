@@ -34,9 +34,10 @@ https://solscan.io/account/MEViEnscUm6tsQRoGd9h6nLQaQspKj7DB2M5FwM3Xvz
 - Raydium CLMM
 - Meteora DLMM
 - Meteora Dynamic AMM
+- Meteora DAMM V2
 - Orca Whirlpool
 - SolFi
-- Meteora DAMM V2
+- Vertigo
 
 ## Getting Started
 
@@ -89,10 +90,13 @@ https://solscan.io/account/MEViEnscUm6tsQRoGd9h6nLQaQspKj7DB2M5FwM3Xvz
   - `raydium_pool_list`: List of Raydium pool addresses
   - `meteora_damm_pool_list`: List of Meteora Dynamic AMM pool addresses
   - `meteora_dlmm_pool_list`: List of Meteora DLMM pool addresses
+  - `meteora_damm_v2_pool_list`: List of Meteora DAMM V2 pool addresses
   - `raydium_cp_pool_list`: List of Raydium CP pool addresses
   - `pump_pool_list`: List of Pump pool addresses
   - `whirlpool_pool_list`: List of Whirlpool pool addresses
   - `raydium_clmm_pool_list`: List of Raydium CLMM pool addresses
+  - `solfi_pool_list`: List of Solfi pool addresses
+  - `vertigo_pool_list`: List of Vertigo pool addresses
   - `lookup_table_accounts`: List of lookup table accounts
   - `process_delay`: Process delay in milliseconds
 

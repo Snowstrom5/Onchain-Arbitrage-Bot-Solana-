@@ -39,6 +39,8 @@ pub struct MintConfig {
 
     pub solfi_pool_list: Option<Vec<String>>,
 
+    pub vertigo_pool_list: Option<Vec<String>>,
+
     pub lookup_table_accounts: Option<Vec<String>>,
     pub process_delay: u64,
 }

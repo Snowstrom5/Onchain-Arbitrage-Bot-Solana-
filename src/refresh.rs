@@ -9,6 +9,7 @@ use crate::dex::raydium::{
 };
 use crate::dex::solfi::constants::solfi_program_id;
 use crate::dex::solfi::info::SolfiInfo;
+use crate::dex::vertigo::{derive_vault_address, vertigo_program_id, VertigoInfo};
 use crate::dex::whirlpool::{
     constants::whirlpool_program_id, state::Whirlpool, update_tick_array_accounts_for_onchain,
 };
@@ -32,10 +33,28 @@ pub async fn initialize_pool_data(
     meteora_damm_pools: Option<&Vec<String>>,
     solfi_pools: Option<&Vec<String>>,
     meteora_damm_v2_pools: Option<&Vec<String>>,
+    vertigo_pools: Option<&Vec<String>>,
     rpc_client: Arc<RpcClient>,
 ) -> anyhow::Result<MintPoolData> {
     info!("Initializing pool data for mint: {}", mint);
-    let mut pool_data = MintPoolData::new(mint, wallet_account)?;
+
+    // Fetch mint account to determine token program
+    let mint_pubkey = Pubkey::from_str(mint)?;
+    let mint_account = rpc_client.get_account(&mint_pubkey)?;
+
+    // Determine token program based on mint account owner
+    let token_2022_program_id =
+        Pubkey::from_str("TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb").unwrap();
+    let token_program = if mint_account.owner == spl_token::ID {
+        spl_token::ID
+    } else if mint_account.owner == token_2022_program_id {
+        token_2022_program_id
+    } else {
+        return Err(anyhow::anyhow!("Unknown token program for mint: {}", mint));
+    };
+
+    info!("Detected token program: {}", token_program);
+    let mut pool_data = MintPoolData::new(mint, wallet_account, token_program)?;
     info!("Pool data initialized for mint: {}", mint);
 
     if let Some(pools) = pump_pools {
@@ -335,6 +354,7 @@ pub async fn initialize_pool_data(
                                 &sol_vault.to_string(),
                                 &amm_info.oracle.to_string(),
                                 bin_array_str_refs,
+                                None, // memo_program
                             )?;
 
                             info!("DLMM pool added: {}", pool_address);
@@ -443,6 +463,7 @@ pub async fn initialize_pool_data(
                                 &token_vault.to_string(),
                                 &sol_vault.to_string(),
                                 tick_array_str_refs,
+                                None, // memo_program
                             )?;
 
                             info!("Whirlpool pool added: {}", pool_address);
@@ -537,6 +558,7 @@ pub async fn initialize_pool_data(
                                 &token_vault.to_string(),
                                 &sol_vault.to_string(),
                                 tick_array_str_refs,
+                                None, // memo_program
                             )?;
 
                             info!("Raydium CLMM pool added: {}", pool_address);
@@ -824,6 +846,79 @@ pub async fn initialize_pool_data(
                     error!(
                         "Error fetching Solfi pool account {}: {:?}",
                         solfi_pool_pubkey, e
+                    );
+                    continue;
+                }
+            }
+        }
+    }
+
+    if let Some(pools) = vertigo_pools {
+        for pool_address in pools {
+            let vertigo_pool_pubkey = Pubkey::from_str(pool_address)?;
+
+            match rpc_client.get_account(&vertigo_pool_pubkey) {
+                Ok(account) => {
+                    if account.owner != vertigo_program_id() {
+                        error!(
+                            "Error: Vertigo pool account is not owned by the Vertigo program. Expected: {}, Actual: {}",
+                            vertigo_program_id(), account.owner
+                        );
+                        return Err(anyhow::anyhow!(
+                            "Vertigo pool account is not owned by the Vertigo program"
+                        ));
+                    }
+
+                    match VertigoInfo::load_checked(&account.data) {
+                        Ok(vertigo_info) => {
+                            info!("Vertigo pool added: {}", pool_address);
+                            info!("    Mint A: {}", vertigo_info.mint_a.to_string());
+                            info!("    Mint B: {}", vertigo_info.mint_b.to_string());
+                            info!("    Owner: {}", vertigo_info.owner.to_string());
+
+                            let base_mint = pool_data.mint.to_string();
+
+                            // Following the original loading pattern from user's code:
+                            let non_base_vault = if base_mint == vertigo_info.mint_a.to_string() {
+                                derive_vault_address(&vertigo_pool_pubkey, &vertigo_info.mint_b).0
+                            } else {
+                                derive_vault_address(&vertigo_pool_pubkey, &vertigo_info.mint_a).0
+                            };
+                            let base_vault = if base_mint == vertigo_info.mint_a.to_string() {
+                                derive_vault_address(&vertigo_pool_pubkey, &vertigo_info.mint_a).0
+                            } else {
+                                derive_vault_address(&vertigo_pool_pubkey, &vertigo_info.mint_b).0
+                            };
+
+                            // Map to transaction expected fields:
+                            // base_mint is our trading token, non-base should be SOL
+                            let token_x_vault = base_vault; // vault for our trading token
+                            let token_sol_vault = non_base_vault; // vault for SOL
+
+                            info!("    Token X Vault: {}", token_x_vault.to_string());
+                            info!("    Token SOL Vault: {}", token_sol_vault.to_string());
+                            info!("");
+
+                            pool_data.add_vertigo_pool(
+                                pool_address,
+                                &vertigo_info.owner.to_string(),
+                                &token_x_vault.to_string(),
+                                &token_sol_vault.to_string(),
+                            )?;
+                        }
+                        Err(e) => {
+                            error!(
+                                "Error parsing Vertigo pool data from pool {}: {:?}",
+                                vertigo_pool_pubkey, e
+                            );
+                            continue;
+                        }
+                    }
+                }
+                Err(e) => {
+                    error!(
+                        "Error fetching Vertigo pool account {}: {:?}",
+                        vertigo_pool_pubkey, e
                     );
                     continue;
                 }
