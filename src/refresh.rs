@@ -869,12 +869,11 @@ pub async fn initialize_pool_data(
                         ));
                     }
 
-                    match VertigoInfo::load_checked(&account.data) {
+                    match VertigoInfo::load_checked(&account.data, &vertigo_pool_pubkey) {
                         Ok(vertigo_info) => {
                             info!("Vertigo pool added: {}", pool_address);
                             info!("    Mint A: {}", vertigo_info.mint_a.to_string());
                             info!("    Mint B: {}", vertigo_info.mint_b.to_string());
-                            info!("    Owner: {}", vertigo_info.owner.to_string());
 
                             let base_mint = pool_data.mint.to_string();
 
@@ -901,7 +900,7 @@ pub async fn initialize_pool_data(
 
                             pool_data.add_vertigo_pool(
                                 pool_address,
-                                &vertigo_info.owner.to_string(),
+                                &vertigo_info.pool.to_string(),
                                 &token_x_vault.to_string(),
                                 &token_sol_vault.to_string(),
                             )?;

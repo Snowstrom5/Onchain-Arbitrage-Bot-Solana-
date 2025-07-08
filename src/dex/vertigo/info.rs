@@ -21,32 +21,32 @@ impl VertigoPool {
 pub struct VertigoInfo {
     pub mint_a: Pubkey,
     pub mint_b: Pubkey,
-    pub owner: Pubkey,
+    pub pool: Pubkey,
 }
 
 impl VertigoInfo {
-    pub fn load_checked(data: &[u8]) -> Result<Self> {
+    pub fn load_checked(data: &[u8], pool: &Pubkey) -> Result<Self> {
         let mut data_slice = &data[..];
         let vertigo_pool = VertigoPool::try_deserialize(&mut data_slice)?;
 
         Ok(Self {
             mint_a: vertigo_pool.mint_a,
             mint_b: vertigo_pool.mint_b,
-            owner: vertigo_pool.owner,
+            pool: pool.to_owned(),
         })
     }
 
     pub fn get_token_and_sol_vaults(&self, base_mint: &str, sol_mint: &Pubkey) -> (Pubkey, Pubkey) {
         let token_x_vault = if base_mint == self.mint_a.to_string() {
-            derive_vault_address(&self.owner, &self.mint_b).0
+            derive_vault_address(&self.pool, &self.mint_b).0
         } else {
-            derive_vault_address(&self.owner, &self.mint_a).0
+            derive_vault_address(&self.pool, &self.mint_a).0
         };
 
         let token_base_vault = if base_mint == self.mint_a.to_string() {
-            derive_vault_address(&self.owner, &self.mint_a).0
+            derive_vault_address(&self.pool, &self.mint_a).0
         } else {
-            derive_vault_address(&self.owner, &self.mint_b).0
+            derive_vault_address(&self.pool, &self.mint_b).0
         };
 
         (token_x_vault, token_base_vault)
