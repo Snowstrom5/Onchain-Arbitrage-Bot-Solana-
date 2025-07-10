@@ -182,7 +182,11 @@ fn create_swap_instruction(
         false,
     )); // Token program (SPL Token or Token 2022)
     let wallet_x_account =
-        spl_associated_token_account::get_associated_token_address(&wallet, &mint_pool_data.mint);
+        spl_associated_token_account::get_associated_token_address_with_program_id(
+            &wallet,
+            &mint_pool_data.mint,
+            &mint_pool_data.token_program,
+        );
     accounts.push(AccountMeta::new(wallet_x_account, false));
 
     for pool in &mint_pool_data.raydium_pools {
