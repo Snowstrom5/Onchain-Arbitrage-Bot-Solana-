@@ -104,6 +104,13 @@ pub async fn initialize_pool_data(
                                     &amm_info.quote_mint,
                                 );
 
+                            // Determine token_mint and base_mint
+                            let (token_mint, base_mint) = if mint_pubkey == amm_info.base_mint {
+                                (amm_info.base_mint, amm_info.quote_mint)
+                            } else {
+                                (amm_info.quote_mint, amm_info.base_mint)
+                            };
+                            
                             pool_data.add_pump_pool(
                                 pool_address,
                                 &token_vault.to_string(),
@@ -111,6 +118,8 @@ pub async fn initialize_pool_data(
                                 &fee_token_wallet.to_string(),
                                 &coin_creator_vault_ata.to_string(),
                                 &amm_info.coin_creator_vault_authority.to_string(),
+                                &token_mint.to_string(),
+                                &base_mint.to_string(),
                             )?;
                             info!("Pump pool added: {}", pool_address);
                             info!("    Base mint: {}", amm_info.base_mint.to_string());
@@ -196,10 +205,19 @@ pub async fn initialize_pool_data(
                                 (amm_info.pc_vault, amm_info.coin_vault)
                             };
 
+                            // Determine token_mint and base_mint
+                            let (token_mint, base_mint) = if mint_pubkey == amm_info.coin_mint {
+                                (amm_info.coin_mint, amm_info.pc_mint)
+                            } else {
+                                (amm_info.pc_mint, amm_info.coin_mint)
+                            };
+                            
                             pool_data.add_raydium_pool(
                                 pool_address,
                                 &token_vault.to_string(),
                                 &sol_vault.to_string(),
+                                &token_mint.to_string(),
+                                &base_mint.to_string(),
                             )?;
                             info!("Raydium pool added: {}", pool_address);
                             info!("    Coin mint: {}", amm_info.coin_mint.to_string());
@@ -274,12 +292,21 @@ pub async fn initialize_pool_data(
                                 ));
                             };
 
+                            // Determine token_mint and base_mint
+                            let (token_mint, base_mint) = if mint_pubkey == amm_info.token_0_mint {
+                                (amm_info.token_0_mint, amm_info.token_1_mint)
+                            } else {
+                                (amm_info.token_1_mint, amm_info.token_0_mint)
+                            };
+                            
                             pool_data.add_raydium_cp_pool(
                                 pool_address,
                                 &token_vault.to_string(),
                                 &sol_vault.to_string(),
                                 &amm_info.amm_config.to_string(),
                                 &amm_info.observation_key.to_string(),
+                                &token_mint.to_string(),
+                                &base_mint.to_string(),
                             )?;
                             info!("Raydium CP pool added: {}", pool_address);
                             info!("    Token vault: {}", token_vault.to_string());
@@ -348,6 +375,13 @@ pub async fn initialize_pool_data(
                             let bin_array_str_refs: Vec<&str> =
                                 bin_array_strings.iter().map(|s| s.as_str()).collect();
 
+                            // Determine token_mint and base_mint
+                            let (token_mint, base_mint) = if mint_pubkey == amm_info.token_x_mint {
+                                (amm_info.token_x_mint, amm_info.token_y_mint)
+                            } else {
+                                (amm_info.token_y_mint, amm_info.token_x_mint)
+                            };
+                            
                             pool_data.add_dlmm_pool(
                                 pool_address,
                                 &token_vault.to_string(),
@@ -355,6 +389,8 @@ pub async fn initialize_pool_data(
                                 &amm_info.oracle.to_string(),
                                 bin_array_str_refs,
                                 None, // memo_program
+                                &token_mint.to_string(),
+                                &base_mint.to_string(),
                             )?;
 
                             info!("DLMM pool added: {}", pool_address);
@@ -457,6 +493,13 @@ pub async fn initialize_pool_data(
                             let tick_array_str_refs: Vec<&str> =
                                 tick_array_strings.iter().map(|s| s.as_str()).collect();
 
+                            // Determine token_mint and base_mint
+                            let (token_mint, base_mint) = if mint_pubkey == whirlpool.token_mint_a {
+                                (whirlpool.token_mint_a, whirlpool.token_mint_b)
+                            } else {
+                                (whirlpool.token_mint_b, whirlpool.token_mint_a)
+                            };
+                            
                             pool_data.add_whirlpool_pool(
                                 pool_address,
                                 &whirlpool_oracle.to_string(),
@@ -464,6 +507,8 @@ pub async fn initialize_pool_data(
                                 &sol_vault.to_string(),
                                 tick_array_str_refs,
                                 None, // memo_program
+                                &token_mint.to_string(),
+                                &base_mint.to_string(),
                             )?;
 
                             info!("Whirlpool pool added: {}", pool_address);
@@ -551,6 +596,13 @@ pub async fn initialize_pool_data(
                             let tick_array_str_refs: Vec<&str> =
                                 tick_array_strings.iter().map(|s| s.as_str()).collect();
 
+                            // Determine token_mint and base_mint
+                            let (token_mint, base_mint) = if mint_pubkey == raydium_clmm.token_mint_0 {
+                                (raydium_clmm.token_mint_0, raydium_clmm.token_mint_1)
+                            } else {
+                                (raydium_clmm.token_mint_1, raydium_clmm.token_mint_0)
+                            };
+                            
                             pool_data.add_raydium_clmm_pool(
                                 pool_address,
                                 &raydium_clmm.amm_config.to_string(),
@@ -559,6 +611,8 @@ pub async fn initialize_pool_data(
                                 &sol_vault.to_string(),
                                 tick_array_str_refs,
                                 None, // memo_program
+                                &token_mint.to_string(),
+                                &base_mint.to_string(),
                             )?;
 
                             info!("Raydium CLMM pool added: {}", pool_address);
@@ -680,6 +734,13 @@ pub async fn initialize_pool_data(
                                 (pool.admin_token_a_fee, pool.admin_token_b_fee)
                             };
 
+                            // Determine token_mint and base_mint
+                            let (token_mint, base_mint) = if mint_pubkey == pool.token_a_mint {
+                                (pool.token_a_mint, pool.token_b_mint)
+                            } else {
+                                (pool.token_b_mint, pool.token_a_mint)
+                            };
+                            
                             pool_data.add_meteora_damm_pool(
                                 pool_address,
                                 &x_vault.to_string(),
@@ -692,6 +753,8 @@ pub async fn initialize_pool_data(
                                 &sol_pool_lp.to_string(),
                                 &x_admin_fee.to_string(),
                                 &sol_admin_fee.to_string(),
+                                &token_mint.to_string(),
+                                &base_mint.to_string(),
                             )?;
 
                             info!("Meteora DAMM pool added: {}", pool_address);
@@ -767,10 +830,19 @@ pub async fn initialize_pool_data(
                             } else {
                                 meteora_damm_v2_info.quote_vault
                             };
+                            // Determine token_mint and base_mint
+                            let (token_mint, base_mint) = if mint_pubkey == meteora_damm_v2_info.base_mint {
+                                (meteora_damm_v2_info.base_mint, meteora_damm_v2_info.quote_mint)
+                            } else {
+                                (meteora_damm_v2_info.quote_mint, meteora_damm_v2_info.base_mint)
+                            };
+                            
                             pool_data.add_meteora_damm_v2_pool(
                                 pool_address,
                                 &token_x_vault.to_string(),
                                 &token_sol_vault.to_string(),
+                                &token_mint.to_string(),
+                                &base_mint.to_string(),
                             )?;
                         }
                         Err(e) => {
@@ -827,10 +899,19 @@ pub async fn initialize_pool_data(
                                 solfi_info.quote_vault
                             };
 
+                            // Determine token_mint and base_mint
+                            let (token_mint, base_mint) = if mint_pubkey == solfi_info.base_mint {
+                                (solfi_info.base_mint, solfi_info.quote_mint)
+                            } else {
+                                (solfi_info.quote_mint, solfi_info.base_mint)
+                            };
+                            
                             pool_data.add_solfi_pool(
                                 pool_address,
                                 &token_x_vault.to_string(),
                                 &token_sol_vault.to_string(),
+                                &token_mint.to_string(),
+                                &base_mint.to_string(),
                             )?;
                         }
                         Err(e) => {
@@ -898,11 +979,20 @@ pub async fn initialize_pool_data(
                             info!("    Token SOL Vault: {}", token_sol_vault.to_string());
                             info!("");
 
+                            // Determine token_mint and base_mint
+                            let (token_mint, base_mint) = if mint_pubkey == vertigo_info.mint_a {
+                                (vertigo_info.mint_a, vertigo_info.mint_b)
+                            } else {
+                                (vertigo_info.mint_b, vertigo_info.mint_a)
+                            };
+                            
                             pool_data.add_vertigo_pool(
                                 pool_address,
                                 &vertigo_info.pool.to_string(),
                                 &token_x_vault.to_string(),
                                 &token_sol_vault.to_string(),
+                                &token_mint.to_string(),
+                                &base_mint.to_string(),
                             )?;
                         }
                         Err(e) => {
