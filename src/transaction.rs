@@ -162,6 +162,7 @@ fn create_swap_instruction(
     let wallet = wallet_kp.pubkey();
     let sol_mint_pubkey = sol_mint();
     let wallet_sol_account = mint_pool_data.wallet_wsol_account;
+    let usdc_mint = Pubkey::from_str("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v").unwrap();
 
     let mut accounts = vec![
         AccountMeta::new(wallet, true), // 0. Wallet (signer)
@@ -173,7 +174,43 @@ fn create_swap_instruction(
         AccountMeta::new_readonly(associated_token_program_id, false), // 6. Associated Token program
     ];
 
-    let base_mint = sol_mint_pubkey;
+    // Determine the base mint for flashloan if needed
+    let flashloan_base_mint = if use_flashloan {
+        // For flashloan, we need a common base mint across all pools
+        // Check if all pools use SOL as base mint
+        let mut all_sol_base = true;
+        let mut all_usdc_base = true;
+        
+        // Check all pool types to see their base mints
+        for pool in &mint_pool_data.raydium_pools {
+            if pool.base_mint != sol_mint_pubkey {
+                all_sol_base = false;
+            }
+            if pool.base_mint != usdc_mint {
+                all_usdc_base = false;
+            }
+        }
+        for pool in &mint_pool_data.raydium_cp_pools {
+            if pool.base_mint != sol_mint_pubkey {
+                all_sol_base = false;
+            }
+            if pool.base_mint != usdc_mint {
+                all_usdc_base = false;
+            }
+        }
+        // Add other pool type checks as needed...
+        
+        if all_sol_base {
+            sol_mint_pubkey
+        } else if all_usdc_base {
+            usdc_mint
+        } else {
+            // Mixed base mints - default to SOL for now
+            sol_mint_pubkey
+        }
+    } else {
+        sol_mint_pubkey
+    };
 
     if use_flashloan {
         accounts.push(AccountMeta::new_readonly(
@@ -182,18 +219,30 @@ fn create_swap_instruction(
         ));
         let token_pda = derive_vault_token_account(
             &Pubkey::from_str("MEViEnscUm6tsQRoGd9h6nLQaQspKj7DB2M5FwM3Xvz").unwrap(),
-            &base_mint,
+            &flashloan_base_mint,
         );
         accounts.push(AccountMeta::new(token_pda.0, false));
     }
 
     // Check for mixed mode (USDC base)
-    let usdc_mint = Pubkey::from_str("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v").unwrap();
     let mut has_usdc_base = false;
 
     // Check all pools to see if any have USDC as base mint
-    // For now, we'll assume all pools have SOL as base, but this can be extended
-    // in the future if we have pools with different base mints
+    for pool in &mint_pool_data.raydium_pools {
+        if pool.base_mint == usdc_mint {
+            has_usdc_base = true;
+            break;
+        }
+    }
+    if !has_usdc_base {
+        for pool in &mint_pool_data.raydium_cp_pools {
+            if pool.base_mint == usdc_mint {
+                has_usdc_base = true;
+                break;
+            }
+        }
+    }
+    // Check other pool types as needed...
 
     // If mixed mode is detected, add the required accounts
     if has_usdc_base {
@@ -233,7 +282,7 @@ fn create_swap_instruction(
     // Add Raydium pools
     for pool in &mint_pool_data.raydium_pools {
         accounts.push(AccountMeta::new_readonly(raydium_program_id(), false));
-        accounts.push(AccountMeta::new_readonly(base_mint, false)); // V9: Add base mint
+        accounts.push(AccountMeta::new_readonly(pool.base_mint, false)); // V9: Add base mint
         accounts.push(AccountMeta::new_readonly(raydium_authority(), false));
         accounts.push(AccountMeta::new(pool.pool, false));
         accounts.push(AccountMeta::new(pool.token_vault, false));
@@ -243,7 +292,7 @@ fn create_swap_instruction(
     // Add Raydium CP pools
     for pool in &mint_pool_data.raydium_cp_pools {
         accounts.push(AccountMeta::new_readonly(raydium_cp_program_id(), false));
-        accounts.push(AccountMeta::new_readonly(base_mint, false)); // V9: Add base mint
+        accounts.push(AccountMeta::new_readonly(pool.base_mint, false)); // V9: Add base mint
         accounts.push(AccountMeta::new_readonly(raydium_cp_authority(), false));
         accounts.push(AccountMeta::new(pool.pool, false));
         accounts.push(AccountMeta::new_readonly(pool.amm_config, false));
@@ -255,7 +304,7 @@ fn create_swap_instruction(
     // Add Pump pools
     for pool in &mint_pool_data.pump_pools {
         accounts.push(AccountMeta::new_readonly(pump_program_id(), false));
-        accounts.push(AccountMeta::new_readonly(base_mint, false)); // V9: Add base mint
+        accounts.push(AccountMeta::new_readonly(pool.base_mint, false)); // V9: Add base mint
         accounts.push(AccountMeta::new_readonly(pump_global_config, false));
         accounts.push(AccountMeta::new_readonly(pump_authority, false));
         accounts.push(AccountMeta::new(pump_fee_wallet(), false));
@@ -273,7 +322,7 @@ fn create_swap_instruction(
     // Add DLMM pairs
     for pair in &mint_pool_data.dlmm_pairs {
         accounts.push(AccountMeta::new_readonly(dlmm_program_id(), false));
-        accounts.push(AccountMeta::new_readonly(base_mint, false)); // V9: Add base mint
+        accounts.push(AccountMeta::new_readonly(pair.base_mint, false)); // V9: Add base mint
         accounts.push(AccountMeta::new_readonly(dlmm_event_authority(), false));
         if let Some(memo_program) = pair.memo_program {
             accounts.push(AccountMeta::new_readonly(memo_program, false));
@@ -290,7 +339,7 @@ fn create_swap_instruction(
     // Add Whirlpool pools
     for pool in &mint_pool_data.whirlpool_pools {
         accounts.push(AccountMeta::new_readonly(whirlpool_program_id(), false));
-        accounts.push(AccountMeta::new_readonly(base_mint, false)); // V9: Add base mint
+        accounts.push(AccountMeta::new_readonly(pool.base_mint, false)); // V9: Add base mint
         accounts.push(AccountMeta::new_readonly(memo_program, false)); // Always add memo program for Whirlpool
         accounts.push(AccountMeta::new(pool.pool, false));
         accounts.push(AccountMeta::new(pool.oracle, false)); // Oracle NEEDS to be writable for Whirlpool
@@ -304,7 +353,7 @@ fn create_swap_instruction(
     // Add Raydium CLMM pools
     for pool in &mint_pool_data.raydium_clmm_pools {
         accounts.push(AccountMeta::new_readonly(raydium_clmm_program_id(), false));
-        accounts.push(AccountMeta::new_readonly(base_mint, false)); // V9: Add base mint
+        accounts.push(AccountMeta::new_readonly(pool.base_mint, false)); // V9: Add base mint
         if let Some(memo_program) = pool.memo_program {
             accounts.push(AccountMeta::new_readonly(memo_program, false));
         }
@@ -322,7 +371,7 @@ fn create_swap_instruction(
     // Add Meteora DAMM pools
     for pool in &mint_pool_data.meteora_damm_pools {
         accounts.push(AccountMeta::new_readonly(damm_program_id(), false));
-        accounts.push(AccountMeta::new_readonly(base_mint, false)); // V9: Add base mint
+        accounts.push(AccountMeta::new_readonly(pool.base_mint, false)); // V9: Add base mint
         accounts.push(AccountMeta::new_readonly(vault_program_id(), false));
         accounts.push(AccountMeta::new(pool.pool, false));
         accounts.push(AccountMeta::new(pool.token_x_vault, false));
@@ -340,7 +389,7 @@ fn create_swap_instruction(
     // Add Meteora DAMM V2 pools
     for pool in &mint_pool_data.meteora_damm_v2_pools {
         accounts.push(AccountMeta::new_readonly(damm_v2_program_id(), false));
-        accounts.push(AccountMeta::new_readonly(base_mint, false)); // V9: Add base mint
+        accounts.push(AccountMeta::new_readonly(pool.base_mint, false)); // V9: Add base mint
         accounts.push(AccountMeta::new_readonly(damm_v2_event_authority(), false));
         accounts.push(AccountMeta::new_readonly(damm_v2_pool_authority(), false));
         accounts.push(AccountMeta::new(pool.pool, false));
@@ -351,7 +400,7 @@ fn create_swap_instruction(
     // Add Solfi pools
     for pool in &mint_pool_data.solfi_pools {
         accounts.push(AccountMeta::new_readonly(solfi_program_id(), false));
-        accounts.push(AccountMeta::new_readonly(base_mint, false)); // V9: Add base mint
+        accounts.push(AccountMeta::new_readonly(pool.base_mint, false)); // V9: Add base mint
         accounts.push(AccountMeta::new_readonly(sysvar_instructions, false));
         accounts.push(AccountMeta::new(pool.pool, false));
         accounts.push(AccountMeta::new(pool.token_x_vault, false));
@@ -361,7 +410,7 @@ fn create_swap_instruction(
     // Add Vertigo pools
     for pool in &mint_pool_data.vertigo_pools {
         accounts.push(AccountMeta::new_readonly(vertigo_program_id(), false));
-        accounts.push(AccountMeta::new_readonly(base_mint, false)); // V9: Add base mint
+        accounts.push(AccountMeta::new_readonly(pool.base_mint, false)); // V9: Add base mint
         accounts.push(AccountMeta::new(pool.pool, false));
         accounts.push(AccountMeta::new_readonly(pool.pool_owner, false));
         accounts.push(AccountMeta::new(pool.token_x_vault, false));

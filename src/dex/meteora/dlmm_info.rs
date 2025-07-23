@@ -146,7 +146,6 @@ impl DlmmInfo {
 
     pub fn calculate_bin_arrays(&self, pair_pubkey: &Pubkey) -> Result<Vec<Pubkey>> {
         let bin_array_index = self.bin_id_to_bin_array_index(self.active_id)?;
-        info!("Bin array index: {}", bin_array_index);
 
         let mut bin_arrays = Vec::new();
         let offsets = [-1, 0, 1];
