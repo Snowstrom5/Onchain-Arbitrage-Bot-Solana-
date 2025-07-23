@@ -2,6 +2,7 @@ use crate::dex::meteora::constants::{dlmm_program_id, BIN_ARRAY};
 use anyhow::Result;
 use solana_program::pubkey::Pubkey;
 use std::mem::size_of;
+use tracing::info;
 
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]
@@ -145,6 +146,7 @@ impl DlmmInfo {
 
     pub fn calculate_bin_arrays(&self, pair_pubkey: &Pubkey) -> Result<Vec<Pubkey>> {
         let bin_array_index = self.bin_id_to_bin_array_index(self.active_id)?;
+        info!("Bin array index: {}", bin_array_index);
 
         let mut bin_arrays = Vec::new();
         let offsets = [-1, 0, 1];
@@ -158,10 +160,18 @@ impl DlmmInfo {
         Ok(bin_arrays)
     }
 
-    fn bin_id_to_bin_array_index(&self, bin_id: i32) -> Result<i32> {
-        // Use a constant bin per array size of 100 as used in the meteora protocol
-        let bin_per_array = 100;
-        Ok(bin_id.div_euclid(bin_per_array))
+    fn div_rem(&self, bin_id: i32, other: i32) -> (i32, i32) {
+        (bin_id / other, bin_id % other)
+    }
+
+    pub fn bin_id_to_bin_array_index(&self, bin_id: i32) -> Result<i32> {
+        let (idx, rem) = self.div_rem(bin_id, 70);
+
+        if bin_id.is_negative() && rem != 0 {
+            Ok(idx - 1)
+        } else {
+            Ok(idx)
+        }
     }
 
     fn derive_bin_array_pda(&self, lb_pair: &Pubkey, index: i64) -> Result<Pubkey> {
