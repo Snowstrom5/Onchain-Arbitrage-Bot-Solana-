@@ -317,10 +317,14 @@ fn create_swap_instruction(
             pool.coin_creator_vault_authority,
             false,
         ));
-        let global_volume_accumulator =
-            Pubkey::from_str("C2aFPdENg4A2HQsmrd5rTw5TaYBX5Ku887cWjbFKtZpw").unwrap();
-        let user_volume_accumulator =
-            Pubkey::from_str("HxNU71aEd9wumSfHsPcYVqeFbAGyFh2QdZMo6zBN9Squ").unwrap();
+        let pump_program_id =
+            Pubkey::from_str("pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA").unwrap();
+        let (global_volume_accumulator, _) =
+            Pubkey::find_program_address(&[b"global_volume_accumulator"], &pump_program_id);
+        let (user_volume_accumulator, _) = Pubkey::find_program_address(
+            &[b"user_volume_accumulator", wallet.as_ref()],
+            &pump_program_id,
+        );
         accounts.push(AccountMeta::new(global_volume_accumulator, false));
         accounts.push(AccountMeta::new(user_volume_accumulator, false));
     }
