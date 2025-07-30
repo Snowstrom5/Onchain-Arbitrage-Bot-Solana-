@@ -180,7 +180,7 @@ fn create_swap_instruction(
         // Check if all pools use SOL as base mint
         let mut all_sol_base = true;
         let mut all_usdc_base = true;
-        
+
         // Check all pool types to see their base mints
         for pool in &mint_pool_data.raydium_pools {
             if pool.base_mint != sol_mint_pubkey {
@@ -199,7 +199,7 @@ fn create_swap_instruction(
             }
         }
         // Add other pool type checks as needed...
-        
+
         if all_sol_base {
             sol_mint_pubkey
         } else if all_usdc_base {
@@ -317,6 +317,12 @@ fn create_swap_instruction(
             pool.coin_creator_vault_authority,
             false,
         ));
+        let global_volume_accumulator =
+            Pubkey::from_str("C2aFPdENg4A2HQsmrd5rTw5TaYBX5Ku887cWjbFKtZpw").unwrap();
+        let user_volume_accumulator =
+            Pubkey::from_str("HxNU71aEd9wumSfHsPcYVqeFbAGyFh2QdZMo6zBN9Squ").unwrap();
+        accounts.push(AccountMeta::new(global_volume_accumulator, false));
+        accounts.push(AccountMeta::new(user_volume_accumulator, false));
     }
 
     // Add DLMM pairs
